@@ -41,13 +41,31 @@
             z-index: 10;
             top: 10px;
             left: 10px;
-            padding: 10px 14px;
-            font-size: 14px;
-            border-radius: 8px;
-            border: none;
-            background: rgba(255,255,255,0.85);
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            border: 3px solid #fff;
+            background: rgba(0, 123, 255, 0.9);
+            color: white;
             cursor: pointer;
             touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            min-width: 120px;
+            min-height: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+        
+        #fullscreen-btn:hover {
+            background: rgba(0, 100, 200, 0.95);
+            transform: scale(1.05);
+        }
+        
+        #fullscreen-btn:active {
+            transform: scale(0.95);
         }
     </style>
 </head>
@@ -154,23 +172,60 @@
             }
         });
 
-        // Fullscreen functionality
+        // Enhanced fullscreen functionality for mobile
         const fullscreenBtn = document.getElementById("fullscreen-btn");
-        fullscreenBtn.addEventListener("click", () => {
+        
+        // Handle both click and touch events for mobile compatibility
+        fullscreenBtn.addEventListener("click", handleFullscreen);
+        fullscreenBtn.addEventListener("touchend", handleFullscreen);
+        
+        function handleFullscreen(e) {
+            // Prevent default behavior and stop propagation
+            e.preventDefault();
+            e.stopPropagation();
+            e.stopImmediatePropagation();
+            
+            console.log('Fullscreen button clicked/tapped');
+            
             const canvas = document.querySelector("canvas");
             if (!canvas) {
                 console.error("Bevy canvas not found yet.");
                 return;
             }
 
-            if (canvas.requestFullscreen) {
-                canvas.requestFullscreen({ vsync: true });
-            } else if (canvas.webkitRequestFullscreen) {
-                canvas.webkitRequestFullscreen();
-            } else if (canvas.mozRequestFullScreen) {
-                canvas.mozRequestFullScreen();
+            // Try different fullscreen APIs for mobile compatibility
+            const requestFullscreen = canvas.requestFullscreen || 
+                                  canvas.webkitRequestFullscreen || 
+                                  canvas.webkitRequestFullScreen || 
+                                  canvas.mozRequestFullScreen || 
+                                  canvas.msRequestFullScreen;
+
+            if (requestFullscreen) {
+                try {
+                    // For mobile browsers, try without vsync option first
+                    if (canvas.requestFullscreen) {
+                        canvas.requestFullscreen().catch(err => {
+                            console.log('Fullscreen request failed:', err);
+                            // Fallback for mobile
+                            if (canvas.webkitRequestFullscreen) {
+                                canvas.webkitRequestFullscreen();
+                            }
+                        });
+                    } else {
+                        // Fallback for other browsers
+                        requestFullscreen.call(canvas);
+                    }
+                } catch (error) {
+                    console.log('Fullscreen error:', error);
+                    // Try webkit fallback
+                    if (canvas.webkitRequestFullscreen) {
+                        canvas.webkitRequestFullscreen();
+                    }
+                }
+            } else {
+                console.error('Fullscreen API not supported');
             }
-        });
+        }
 
         // Lock orientation for better mobile experience
         if (screen.orientation && screen.orientation.lock) {
