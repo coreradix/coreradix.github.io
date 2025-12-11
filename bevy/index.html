@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+
+  <body style="margin: 0px; background: #000;">
+
+    <!-- Fullscreen Button -->
+    <button id="fullscreen-btn" style="
+      position: absolute;
+      z-index: 10;
+      top: 10px;
+      left: 10px;
+      padding: 10px 14px;
+      font-size: 14px;
+      border-radius: 8px;
+      border: none;
+      background: rgba(255,255,255,0.85);
+      cursor: pointer;
+    ">Fullscreen</button>
+
+    <script type="module">
+      import init from './bevy_game.js'
+
+      init().catch((error) => {
+        if (!error.message.startsWith("Using exceptions for control flow")) {
+          throw error;
+        }
+      });
+
+      // Wait for Bevy to create the canvas
+      const fullscreenBtn = document.getElementById("fullscreen-btn");
+
+      fullscreenBtn.addEventListener("click", () => {
+        const canvas = document.querySelector("canvas");
+        if (!canvas) {
+          console.error("Bevy canvas not found yet.");
+          return;
+        }
+
+        if (canvas.requestFullscreen) {
+          canvas.requestFullscreen();
+        } else if (canvas.webkitRequestFullscreen) {
+          canvas.webkitRequestFullscreen(); // Safari
+        }
+      });
+    </script>
+  </body>
+</html>
