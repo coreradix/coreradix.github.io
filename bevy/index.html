@@ -1,47 +1,193 @@
 <!doctype html>
 <html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: #000;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+            width: 100vw;
+            height: 100vh;
+        }
+        
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+            image-rendering: optimizeSpeed;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: optimize-contrast;
+            image-rendering: pixelated;
+            -ms-interpolation-mode: nearest-neighbor;
+        }
+        
+        #fullscreen-btn {
+            position: absolute;
+            z-index: 10;
+            top: 10px;
+            left: 10px;
+            padding: 10px 14px;
+            font-size: 14px;
+            border-radius: 8px;
+            border: none;
+            background: rgba(255,255,255,0.85);
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+    </style>
+</head>
 
-  <body style="margin: 0px; background: #000;">
-
+<body>
     <!-- Fullscreen Button -->
-    <button id="fullscreen-btn" style="
-      position: absolute;
-      z-index: 10;
-      top: 10px;
-      left: 10px;
-      padding: 10px 14px;
-      font-size: 14px;
-      border-radius: 8px;
-      border: none;
-      background: rgba(255,255,255,0.85);
-      cursor: pointer;
-    ">Fullscreen</button>
+    <button id="fullscreen-btn">Fullscreen</button>
 
     <script type="module">
-      import init from './bevy_game.js'
+        import init from './bevy_game.js'
 
-      init().catch((error) => {
-        if (!error.message.startsWith("Using exceptions for control flow")) {
-          throw error;
-        }
-      });
-
-      // Wait for Bevy to create the canvas
-      const fullscreenBtn = document.getElementById("fullscreen-btn");
-
-      fullscreenBtn.addEventListener("click", () => {
-        const canvas = document.querySelector("canvas");
-        if (!canvas) {
-          console.error("Bevy canvas not found yet.");
-          return;
+        // Make canvas fill entire screen
+        function resizeCanvas() {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                canvas.style.width = '100vw';
+                canvas.style.height = '100vh';
+                console.log('Canvas resized to:', window.innerWidth, 'x', window.innerHeight);
+            }
         }
 
-        if (canvas.requestFullscreen) {
-          canvas.requestFullscreen();
-        } else if (canvas.webkitRequestFullscreen) {
-          canvas.webkitRequestFullscreen(); // Safari
+        // Resize on load and resize events
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('orientationchange', resizeCanvas);
+
+        // Initial resize attempt
+        resizeCanvas();
+
+        // Poll for canvas creation (Bevy creates it asynchronously)
+        let canvasCheckInterval = setInterval(() => {
+            const canvas = document.querySelector('canvas');
+            if (canvas) {
+                console.log('Canvas found, resizing immediately');
+                resizeCanvas();
+                clearInterval(canvasCheckInterval);
+            }
+        }, 100);
+
+        // Stop polling after 5 seconds to prevent infinite loop
+        setTimeout(() => {
+            clearInterval(canvasCheckInterval);
+        }, 5000);
+
+        // Performance optimizations for mobile
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
         }
-      });
+
+        // Disable context menu on long press
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+            return false;
+        });
+
+        // Prevent default touch behaviors
+        document.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        document.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+        }, { passive: false });
+
+        init().catch((error) => {
+            if (!error.message.startsWith("Using exceptions for control flow")) {
+                throw error;
+            }
+        }).then(() => {
+            console.log('Bevy initialized, configuring canvas');
+            const canvas = document.querySelector("canvas");
+            if (canvas) {
+                // Resize immediately when Bevy creates the canvas
+                resizeCanvas();
+                
+                // Request high performance mode
+                canvas.getContext('webgl2', {
+                    alpha: false,
+                    antialias: false,
+                    depth: true,
+                    desynchronized: true,
+                    powerPreference: 'high-performance',
+                    premultipliedAlpha: false,
+                    preserveDrawingBuffer: false,
+                    stencil: false,
+                    failIfMajorPerformanceCaveat: false
+                });
+
+                canvas.style.imageRendering = 'crisp-edges';
+                canvas.style.imageRendering = 'pixelated';
+                
+                canvas.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+                
+                canvas.addEventListener('touchmove', function(e) {
+                    e.preventDefault();
+                }, { passive: false });
+            }
+        });
+
+        // Fullscreen functionality
+        const fullscreenBtn = document.getElementById("fullscreen-btn");
+        fullscreenBtn.addEventListener("click", () => {
+            const canvas = document.querySelector("canvas");
+            if (!canvas) {
+                console.error("Bevy canvas not found yet.");
+                return;
+            }
+
+            if (canvas.requestFullscreen) {
+                canvas.requestFullscreen({ vsync: true });
+            } else if (canvas.webkitRequestFullscreen) {
+                canvas.webkitRequestFullscreen();
+            } else if (canvas.mozRequestFullScreen) {
+                canvas.mozRequestFullScreen();
+            }
+        });
+
+        // Lock orientation for better mobile experience
+        if (screen.orientation && screen.orientation.lock) {
+            screen.orientation.lock('landscape').catch(() => {
+                console.log('Orientation lock failed');
+            });
+        }
+
+        // Prevent zoom on double tap
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function (event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
-  </body>
+</body>
 </html>
