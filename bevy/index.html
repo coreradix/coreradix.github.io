@@ -126,13 +126,16 @@
             return false;
         });
 
-        // Prevent default touch behaviors
+        // Prevent default touch behaviors except for the fullscreen button
         document.addEventListener('touchmove', function(e) {
             e.preventDefault();
         }, { passive: false });
 
         document.addEventListener('touchstart', function(e) {
-            e.preventDefault();
+            // Allow touch events on the fullscreen button
+            if (e.target.id !== 'fullscreen-btn') {
+                e.preventDefault();
+            }
         }, { passive: false });
 
         init().catch((error) => {
